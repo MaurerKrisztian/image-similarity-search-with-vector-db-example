@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Similarity Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+        }
+
+        .settings-section label {
+            margin-right: 10px;
+        }
+
+        .settings-section input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            margin-right: 20px;
+        }
+
+        .image-grid-scrollable {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            height: 300px;
+        }
+
+        .image-grid-scrollable img {
+            width: 150px;
+            height: auto;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            margin-right: 10px;
+            display: inline-block;
+            transition: border-color 0.3s;
+        }
+
+        .image-grid-scrollable img:hover {
+            border-color: #007BFF;
+        }
+
+        .image-grid-results img {
+            width: 222px;
+            height: auto;
+            object-fit: cover;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .image-grid-results {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .settings-section input[type="number"] {
+            width: 60px;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Image Similarity Search</h1>
+
+    <!-- Settings Section -->
+    <div class="settings-section">
+        <h3>Settings</h3>
+        <label for="num-similar-images">Number of Similar Images:</label>
+        <input type="number" id="num-similar-images" value="5" min="1" max="20">
+
+        <label for="distance-metric">Distance Metric:</label>
+        <select id="distance-metric">
+            <option value="cosine">Cosine</option>
+            <option value="euclidean">Euclidean</option>
+            <option value="dot">Dot Product</option>
+        </select>
+    </div>
+
+    <!-- Preloaded Images -->
+    <h3>Click on an image to find similar images</h3>
+    <div id="preloaded-images" class="image-grid-scrollable"></div>
+
+    <!-- Search Results -->
+    <h3>Search Results</h3>
+    <div id="results" class="image-grid-results"></div>
+</div>
+
+<script>
+    const apiUrl = 'http://127.0.0.1:8000';
+    const preloadedImagesContainer = document.getElementById('preloaded-images');
+    const resultsContainer = document.getElementById('results');
+    const numSimilarImagesInput = document.getElementById('num-similar-images');
+    const distanceMetricSelect = document.getElementById('distance-metric');
+
+    // Function to load preloaded images from ./data/images
+    async function loadPreloadedImages() {
+        try {
+            const response = await fetch(`${apiUrl}/preloaded-images`);
+            const imageFilenames = await response.json();
+
+            imageFilenames.forEach(filename => {
+                const imgElement = document.createElement('img');
+                imgElement.src = `./data/images/${filename}`;
+                imgElement.alt = filename;
+                imgElement.onclick = () => findSimilarImages(filename);
+                preloadedImagesContainer.appendChild(imgElement);
+            });
+        } catch (error) {
+            console.error("Error loading preloaded images:", error);
+        }
+    }
+
+    // Function to find similar images
+    async function findSimilarImages(filename) {
+        try {
+            const numSimilarImages = parseInt(numSimilarImagesInput.value) || 5;
+            const distanceMetric = distanceMetricSelect.value;
+
+            const response = await fetch(`${apiUrl}/search-image-by-filename?filename=${filename}&top_k=${numSimilarImages}&distance=${distanceMetric}`);
+            const similarImages = await response.json();
+
+            // Clear previous results
+            resultsContainer.innerHTML = '';
+
+            if (similarImages.length === 0) {
+                resultsContainer.innerHTML = '<p>No similar images found.</p>';
+                return;
+            }
+
+            similarImages.forEach(image => {
+                const imgElement = document.createElement('img');
+                imgElement.src = `./data/images/${image}`;
+                imgElement.alt = image;
+                resultsContainer.appendChild(imgElement);
+            });
+        } catch (error) {
+            console.error("Error searching for similar images:", error);
+        }
+    }
+
+    // Load preloaded images on page load
+    loadPreloadedImages();
+</script>
+
+</body>
+
+</html>
